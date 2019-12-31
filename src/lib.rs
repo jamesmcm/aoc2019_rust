@@ -21,242 +21,248 @@ pub fn input_generator(input: &str) -> Vec<i32> {
 }
 
 struct VM {
-  ram: Vec<i32>,
-  pc: usize,
-  output: Vec<i32>,
-  input: Vec<i32>,
+    ram: Vec<i32>,
+    pc: usize,
+    output: Vec<i32>,
+    input: Vec<i32>,
 }
 
-
 impl VM {
-  fn run(&mut self) -> () {
-    while self.ram[self.pc] != 99 {
-        let opcode: i32 = self.ram[self.pc] % 100;
-        let param_modes: Vec<i32> = vec![
-            (self.ram[self.pc] / 100) % 10,
-            (self.ram[self.pc] / 1000) % 10,
-            (self.ram[self.pc] / 10000) % 10,
-        ];
+    fn run(&mut self) -> () {
+        while self.ram[self.pc] != 99 {
+            let opcode: i32 = self.ram[self.pc] % 100;
+            let param_modes: Vec<i32> = vec![
+                (self.ram[self.pc] / 100) % 10,
+                (self.ram[self.pc] / 1000) % 10,
+                (self.ram[self.pc] / 10000) % 10,
+            ];
 
-        match opcode {
-            1 => {
-                // ADD
-                let dest: usize = self.ram[self.pc + 3] as usize;
-                let src1: usize = self.ram[self.pc + 1] as usize;
-                let src2: usize = self.ram[self.pc + 2] as usize;
-                let mut val1: i32 = 0;
-                let mut val2: i32 = 0;
+            match opcode {
+                1 => {
+                    // ADD
+                    let dest: usize = self.ram[self.pc + 3] as usize;
+                    let src1: usize = self.ram[self.pc + 1] as usize;
+                    let src2: usize = self.ram[self.pc + 2] as usize;
+                    let mut val1: i32 = 0;
+                    let mut val2: i32 = 0;
 
-                match param_modes[0] {
-                    0 => {
-                        val1 = self.ram[src1];
-                    }
-                    1 => {
-                        val1 = src1 as i32;
-                    }
-                    _ => {}
-                }
-                match param_modes[1] {
-                    0 => {
-                        val2 = self.ram[src2];
-                    }
-                    1 => {
-                        val2 = src2 as i32;
-                    }
-                    _ => {}
-                }
-                self.ram[dest] = val1 + val2;
-                self.pc += 4;
-            }
-            2 => {
-                // MUL
-                let dest: usize = self.ram[self.pc + 3] as usize;
-                let src1: usize = self.ram[self.pc + 1] as usize;
-                let src2: usize = self.ram[self.pc + 2] as usize;
-                let mut val1: i32 = 0;
-                let mut val2: i32 = 0;
-
-                // TODO DRY
-                match param_modes[0] {
-                    0 => {
-                        val1 = self.ram[src1];
-                    }
-                    1 => {
-                        val1 = src1 as i32;
-                    }
-                    _ => {}
-                }
-                match param_modes[1] {
-                    0 => {
-                        val2 = self.ram[src2];
-                    }
-                    1 => {
-                        val2 = src2 as i32;
-                    }
-                    _ => {}
-                }
-                self.ram[dest] = val1 * val2;
-                self.pc += 4;
-            }
-            3 => {
-                // IN
-                let dest: usize = self.ram[self.pc + 1] as usize;
-                self.ram[dest] = self.input.pop().unwrap();
-                self.pc += 2;
-            }
-            4 => {
-                // OUT
-                match param_modes[0] {
-                    0 => {
-                        self.output.push(self.ram[self.ram[self.pc + 1 as usize] as usize]);
-                    }
-                    1 => {
-                        self.output.push(self.ram[self.pc + 1]);
-                    }
-                    _ => {}
-                }
-
-                self.pc += 2;
-            }
-            5 => {
-                // JNZ
-                let mut check: i32 = 0;
-
-                match param_modes[0] {
-                    0 => {
-                        check = self.ram[self.ram[self.pc + 1 as usize] as usize];
-                    }
-                    1 => {
-                        check = self.ram[self.pc + 1 as usize];
-                    }
-                    _ => {}
-                }
-
-                if check != 0 {
-                    match param_modes[1] {
+                    match param_modes[0] {
                         0 => {
-                            self.pc = self.ram[self.ram[self.pc + 2 as usize] as usize] as usize;
+                            val1 = self.ram[src1];
                         }
                         1 => {
-                            self.pc = self.ram[self.pc + 2 as usize] as usize;
+                            val1 = src1 as i32;
                         }
                         _ => {}
                     }
-                } else {
-                    self.pc += 3;
-                }
-            }
-            6 => {
-                // JEZ
-                let mut check: i32 = 0;
-
-                match param_modes[0] {
-                    0 => {
-                        check = self.ram[self.ram[self.pc + 1 as usize] as usize];
-                    }
-                    1 => {
-                        check = self.ram[self.pc + 1 as usize];
-                    }
-                    _ => {}
-                }
-
-                if check == 0 {
                     match param_modes[1] {
                         0 => {
-                            self.pc = self.ram[self.ram[self.pc + 2 as usize] as usize] as usize;
+                            val2 = self.ram[src2];
                         }
                         1 => {
-                            self.pc = self.ram[self.pc + 2 as usize] as usize;
+                            val2 = src2 as i32;
                         }
                         _ => {}
                     }
-                } else {
-                    self.pc += 3;
+                    self.ram[dest] = val1 + val2;
+                    self.pc += 4;
                 }
-            }
-            7 => {
-                // LT
-                let mut check: i32 = 0;
-                let mut check2: i32 = 0;
+                2 => {
+                    // MUL
+                    let dest: usize = self.ram[self.pc + 3] as usize;
+                    let src1: usize = self.ram[self.pc + 1] as usize;
+                    let src2: usize = self.ram[self.pc + 2] as usize;
+                    let mut val1: i32 = 0;
+                    let mut val2: i32 = 0;
 
-                match param_modes[0] {
-                    0 => {
-                        check = self.ram[self.ram[self.pc + 1 as usize] as usize];
+                    // TODO DRY
+                    match param_modes[0] {
+                        0 => {
+                            val1 = self.ram[src1];
+                        }
+                        1 => {
+                            val1 = src1 as i32;
+                        }
+                        _ => {}
                     }
-                    1 => {
-                        check = self.ram[self.pc + 1 as usize];
+                    match param_modes[1] {
+                        0 => {
+                            val2 = self.ram[src2];
+                        }
+                        1 => {
+                            val2 = src2 as i32;
+                        }
+                        _ => {}
                     }
-                    _ => {}
+                    self.ram[dest] = val1 * val2;
+                    self.pc += 4;
                 }
+                3 => {
+                    // IN
+                    let dest: usize = self.ram[self.pc + 1] as usize;
+                    self.ram[dest] = self.input.pop().unwrap();
+                    self.pc += 2;
+                }
+                4 => {
+                    // OUT
+                    match param_modes[0] {
+                        0 => {
+                            self.output
+                                .push(self.ram[self.ram[self.pc + 1 as usize] as usize]);
+                        }
+                        1 => {
+                            self.output.push(self.ram[self.pc + 1]);
+                        }
+                        _ => {}
+                    }
 
-                match param_modes[1] {
-                    0 => {
-                        check2 = self.ram[self.ram[self.pc + 2 as usize] as usize];
-                    }
-                    1 => {
-                        check2 = self.ram[self.pc + 2 as usize];
-                    }
-                    _ => {}
+                    self.pc += 2;
                 }
+                5 => {
+                    // JNZ
+                    let mut check: i32 = 0;
 
-                if check < check2 {
-                    let dest: usize = self.ram[self.pc + 3 as usize] as usize;
-                    self.ram[dest] = 1;
-                } else {
-                    let dest: usize = self.ram[self.pc + 3 as usize] as usize;
-                    self.ram[dest] = 0;
-                }
-                self.pc += 4;
-            }
-            8 => {
-                // EQ
-                let mut check: i32 = 0;
-                let mut check2: i32 = 0;
+                    match param_modes[0] {
+                        0 => {
+                            check = self.ram[self.ram[self.pc + 1 as usize] as usize];
+                        }
+                        1 => {
+                            check = self.ram[self.pc + 1 as usize];
+                        }
+                        _ => {}
+                    }
 
-                match param_modes[0] {
-                    0 => {
-                        check = self.ram[self.ram[self.pc + 1 as usize] as usize];
+                    if check != 0 {
+                        match param_modes[1] {
+                            0 => {
+                                self.pc =
+                                    self.ram[self.ram[self.pc + 2 as usize] as usize] as usize;
+                            }
+                            1 => {
+                                self.pc = self.ram[self.pc + 2 as usize] as usize;
+                            }
+                            _ => {}
+                        }
+                    } else {
+                        self.pc += 3;
                     }
-                    1 => {
-                        check = self.ram[self.pc + 1 as usize];
-                    }
-                    _ => {}
                 }
+                6 => {
+                    // JEZ
+                    let mut check: i32 = 0;
 
-                match param_modes[1] {
-                    0 => {
-                        check2 = self.ram[self.ram[self.pc + 2 as usize] as usize];
+                    match param_modes[0] {
+                        0 => {
+                            check = self.ram[self.ram[self.pc + 1 as usize] as usize];
+                        }
+                        1 => {
+                            check = self.ram[self.pc + 1 as usize];
+                        }
+                        _ => {}
                     }
-                    1 => {
-                        check2 = self.ram[self.pc + 2 as usize];
-                    }
-                    _ => {}
-                }
 
-                if check == check2 {
-                    let dest: usize = self.ram[self.pc + 3 as usize] as usize;
-                    self.ram[dest] = 1;
-                } else {
-                    let dest: usize = self.ram[self.pc + 3 as usize] as usize;
-                    self.ram[dest] = 0;
+                    if check == 0 {
+                        match param_modes[1] {
+                            0 => {
+                                self.pc =
+                                    self.ram[self.ram[self.pc + 2 as usize] as usize] as usize;
+                            }
+                            1 => {
+                                self.pc = self.ram[self.pc + 2 as usize] as usize;
+                            }
+                            _ => {}
+                        }
+                    } else {
+                        self.pc += 3;
+                    }
                 }
-                self.pc += 4;
-            }
-            99 => {
-                break;
-            }
-            _ => {
-                println! {"Error"};
-                break;
+                7 => {
+                    // LT
+                    let mut check: i32 = 0;
+                    let mut check2: i32 = 0;
+
+                    match param_modes[0] {
+                        0 => {
+                            check = self.ram[self.ram[self.pc + 1 as usize] as usize];
+                        }
+                        1 => {
+                            check = self.ram[self.pc + 1 as usize];
+                        }
+                        _ => {}
+                    }
+
+                    match param_modes[1] {
+                        0 => {
+                            check2 = self.ram[self.ram[self.pc + 2 as usize] as usize];
+                        }
+                        1 => {
+                            check2 = self.ram[self.pc + 2 as usize];
+                        }
+                        _ => {}
+                    }
+
+                    if check < check2 {
+                        let dest: usize = self.ram[self.pc + 3 as usize] as usize;
+                        self.ram[dest] = 1;
+                    } else {
+                        let dest: usize = self.ram[self.pc + 3 as usize] as usize;
+                        self.ram[dest] = 0;
+                    }
+                    self.pc += 4;
+                }
+                8 => {
+                    // EQ
+                    let mut check: i32 = 0;
+                    let mut check2: i32 = 0;
+
+                    match param_modes[0] {
+                        0 => {
+                            check = self.ram[self.ram[self.pc + 1 as usize] as usize];
+                        }
+                        1 => {
+                            check = self.ram[self.pc + 1 as usize];
+                        }
+                        _ => {}
+                    }
+
+                    match param_modes[1] {
+                        0 => {
+                            check2 = self.ram[self.ram[self.pc + 2 as usize] as usize];
+                        }
+                        1 => {
+                            check2 = self.ram[self.pc + 2 as usize];
+                        }
+                        _ => {}
+                    }
+
+                    if check == check2 {
+                        let dest: usize = self.ram[self.pc + 3 as usize] as usize;
+                        self.ram[dest] = 1;
+                    } else {
+                        let dest: usize = self.ram[self.pc + 3 as usize] as usize;
+                        self.ram[dest] = 0;
+                    }
+                    self.pc += 4;
+                }
+                99 => {
+                    break;
+                }
+                _ => {
+                    println! {"Error"};
+                    break;
+                }
             }
         }
     }
-  }
 }
 
-
-pub fn intcode_vm(input: &[i32], mut input_vec: Vec<i32>) -> (Vec<i32>, Vec<i32>) {
-    let mut vm: VM = VM {ram: input.to_vec(), pc: 0, output: Vec::new(), input: input_vec.clone()};
+pub fn intcode_vm(input: &[i32], input_vec: Vec<i32>) -> (Vec<i32>, Vec<i32>) {
+    let mut vm: VM = VM {
+        ram: input.to_vec(),
+        pc: 0,
+        output: Vec::new(),
+        input: input_vec.clone(),
+    };
     vm.run();
     (vm.ram, vm.output)
 }
