@@ -1,5 +1,4 @@
 use crate::intcode_vm;
-use itertools::Itertools;
 
 #[aoc_generator(day7)]
 pub fn input_generator(input: &str) -> Vec<i32> {
@@ -14,20 +13,20 @@ pub fn solve_part1(input: &[i32]) -> i32 {
     let mut phases: Vec<Vec<i32>> = Vec::new();
     let mut max_signal: i32 = 0;
 
-    for i in (0..5) {
-        for j in (0..5) {
+    for i in 0..5 {
+        for j in 0..5 {
             if j == i {
                 continue;
             }
-            for k in (0..5) {
+            for k in 0..5 {
                 if k == i || k == j {
                     continue;
                 }
-                for l in (0..5) {
+                for l in 0..5 {
                     if l == i || l == j || l == k {
                         continue;
                     }
-                    for m in (0..5) {
+                    for m in 0..5 {
                         if m == i || m == j || m == k || m == l {
                             continue;
                         }
@@ -41,16 +40,16 @@ pub fn solve_part1(input: &[i32]) -> i32 {
     for p in phases {
         let ram: Vec<i32> = input.to_vec();
         let input_vec: Vec<i32> = vec![0, p[0]];
-        let mut output: Vec<i32> = intcode_vm(&ram, input_vec).1;
+        let output: Vec<i32> = intcode_vm(&ram, input_vec).1;
 
         let input_vec: Vec<i32> = vec![output[0], p[1]];
-        let mut output: Vec<i32> = intcode_vm(&ram, input_vec).1;
+        let output: Vec<i32> = intcode_vm(&ram, input_vec).1;
         let input_vec: Vec<i32> = vec![output[0], p[2]];
-        let mut output: Vec<i32> = intcode_vm(&ram, input_vec).1;
+        let output: Vec<i32> = intcode_vm(&ram, input_vec).1;
         let input_vec: Vec<i32> = vec![output[0], p[3]];
-        let mut output: Vec<i32> = intcode_vm(&ram, input_vec).1;
+        let output: Vec<i32> = intcode_vm(&ram, input_vec).1;
         let input_vec: Vec<i32> = vec![output[0], p[4]];
-        let mut output: Vec<i32> = intcode_vm(&ram, input_vec).1;
+        let output: Vec<i32> = intcode_vm(&ram, input_vec).1;
         if output[0] > max_signal {
             max_signal = output[0];
         }
