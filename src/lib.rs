@@ -20,31 +20,36 @@ pub fn input_generator(input: &str) -> Vec<i32> {
         .collect()
 }
 
-pub fn intcode_vm(input: &[i32], mut input_vec: Vec<i32>) -> (Vec<i32>, Vec<i32>) {
-    let mut ram: Vec<i32> = input.to_vec();
-    let mut i: usize = 0;
-    let mut output: Vec<i32> = Vec::new();
+struct VM {
+  ram: Vec<i32>,
+  pc: usize,
+  output: Vec<i32>,
+  input: Vec<i32>,
+}
 
-    while ram[i] != 99 {
-        let opcode: i32 = ram[i] % 100;
+
+impl VM {
+  fn run(&mut self) -> () {
+    while self.ram[self.pc] != 99 {
+        let opcode: i32 = self.ram[self.pc] % 100;
         let param_modes: Vec<i32> = vec![
-            (ram[i] / 100) % 10,
-            (ram[i] / 1000) % 10,
-            (ram[i] / 10000) % 10,
+            (self.ram[self.pc] / 100) % 10,
+            (self.ram[self.pc] / 1000) % 10,
+            (self.ram[self.pc] / 10000) % 10,
         ];
 
         match opcode {
             1 => {
                 // ADD
-                let dest: usize = ram[i + 3] as usize;
-                let src1: usize = ram[i + 1] as usize;
-                let src2: usize = ram[i + 2] as usize;
+                let dest: usize = self.ram[self.pc + 3] as usize;
+                let src1: usize = self.ram[self.pc + 1] as usize;
+                let src2: usize = self.ram[self.pc + 2] as usize;
                 let mut val1: i32 = 0;
                 let mut val2: i32 = 0;
 
                 match param_modes[0] {
                     0 => {
-                        val1 = ram[src1];
+                        val1 = self.ram[src1];
                     }
                     1 => {
                         val1 = src1 as i32;
@@ -53,28 +58,28 @@ pub fn intcode_vm(input: &[i32], mut input_vec: Vec<i32>) -> (Vec<i32>, Vec<i32>
                 }
                 match param_modes[1] {
                     0 => {
-                        val2 = ram[src2];
+                        val2 = self.ram[src2];
                     }
                     1 => {
                         val2 = src2 as i32;
                     }
                     _ => {}
                 }
-                ram[dest] = val1 + val2;
-                i += 4;
+                self.ram[dest] = val1 + val2;
+                self.pc += 4;
             }
             2 => {
                 // MUL
-                let dest: usize = ram[i + 3] as usize;
-                let src1: usize = ram[i + 1] as usize;
-                let src2: usize = ram[i + 2] as usize;
+                let dest: usize = self.ram[self.pc + 3] as usize;
+                let src1: usize = self.ram[self.pc + 1] as usize;
+                let src2: usize = self.ram[self.pc + 2] as usize;
                 let mut val1: i32 = 0;
                 let mut val2: i32 = 0;
 
                 // TODO DRY
                 match param_modes[0] {
                     0 => {
-                        val1 = ram[src1];
+                        val1 = self.ram[src1];
                     }
                     1 => {
                         val1 = src1 as i32;
@@ -83,35 +88,35 @@ pub fn intcode_vm(input: &[i32], mut input_vec: Vec<i32>) -> (Vec<i32>, Vec<i32>
                 }
                 match param_modes[1] {
                     0 => {
-                        val2 = ram[src2];
+                        val2 = self.ram[src2];
                     }
                     1 => {
                         val2 = src2 as i32;
                     }
                     _ => {}
                 }
-                ram[dest] = val1 * val2;
-                i += 4;
+                self.ram[dest] = val1 * val2;
+                self.pc += 4;
             }
             3 => {
                 // IN
-                let dest: usize = ram[i + 1] as usize;
-                ram[dest] = input_vec.pop().unwrap();
-                i += 2;
+                let dest: usize = self.ram[self.pc + 1] as usize;
+                self.ram[dest] = self.input.pop().unwrap();
+                self.pc += 2;
             }
             4 => {
                 // OUT
                 match param_modes[0] {
                     0 => {
-                        output.push(ram[ram[i + 1 as usize] as usize]);
+                        self.output.push(self.ram[self.ram[self.pc + 1 as usize] as usize]);
                     }
                     1 => {
-                        output.push(ram[i + 1]);
+                        self.output.push(self.ram[self.pc + 1]);
                     }
                     _ => {}
                 }
 
-                i += 2;
+                self.pc += 2;
             }
             5 => {
                 // JNZ
@@ -119,10 +124,10 @@ pub fn intcode_vm(input: &[i32], mut input_vec: Vec<i32>) -> (Vec<i32>, Vec<i32>
 
                 match param_modes[0] {
                     0 => {
-                        check = ram[ram[i + 1 as usize] as usize];
+                        check = self.ram[self.ram[self.pc + 1 as usize] as usize];
                     }
                     1 => {
-                        check = ram[i + 1 as usize];
+                        check = self.ram[self.pc + 1 as usize];
                     }
                     _ => {}
                 }
@@ -130,15 +135,15 @@ pub fn intcode_vm(input: &[i32], mut input_vec: Vec<i32>) -> (Vec<i32>, Vec<i32>
                 if check != 0 {
                     match param_modes[1] {
                         0 => {
-                            i = ram[ram[i + 2 as usize] as usize] as usize;
+                            self.pc = self.ram[self.ram[self.pc + 2 as usize] as usize] as usize;
                         }
                         1 => {
-                            i = ram[i + 2 as usize] as usize;
+                            self.pc = self.ram[self.pc + 2 as usize] as usize;
                         }
                         _ => {}
                     }
                 } else {
-                    i += 3;
+                    self.pc += 3;
                 }
             }
             6 => {
@@ -147,10 +152,10 @@ pub fn intcode_vm(input: &[i32], mut input_vec: Vec<i32>) -> (Vec<i32>, Vec<i32>
 
                 match param_modes[0] {
                     0 => {
-                        check = ram[ram[i + 1 as usize] as usize];
+                        check = self.ram[self.ram[self.pc + 1 as usize] as usize];
                     }
                     1 => {
-                        check = ram[i + 1 as usize];
+                        check = self.ram[self.pc + 1 as usize];
                     }
                     _ => {}
                 }
@@ -158,15 +163,15 @@ pub fn intcode_vm(input: &[i32], mut input_vec: Vec<i32>) -> (Vec<i32>, Vec<i32>
                 if check == 0 {
                     match param_modes[1] {
                         0 => {
-                            i = ram[ram[i + 2 as usize] as usize] as usize;
+                            self.pc = self.ram[self.ram[self.pc + 2 as usize] as usize] as usize;
                         }
                         1 => {
-                            i = ram[i + 2 as usize] as usize;
+                            self.pc = self.ram[self.pc + 2 as usize] as usize;
                         }
                         _ => {}
                     }
                 } else {
-                    i += 3;
+                    self.pc += 3;
                 }
             }
             7 => {
@@ -176,32 +181,32 @@ pub fn intcode_vm(input: &[i32], mut input_vec: Vec<i32>) -> (Vec<i32>, Vec<i32>
 
                 match param_modes[0] {
                     0 => {
-                        check = ram[ram[i + 1 as usize] as usize];
+                        check = self.ram[self.ram[self.pc + 1 as usize] as usize];
                     }
                     1 => {
-                        check = ram[i + 1 as usize];
+                        check = self.ram[self.pc + 1 as usize];
                     }
                     _ => {}
                 }
 
                 match param_modes[1] {
                     0 => {
-                        check2 = ram[ram[i + 2 as usize] as usize];
+                        check2 = self.ram[self.ram[self.pc + 2 as usize] as usize];
                     }
                     1 => {
-                        check2 = ram[i + 2 as usize];
+                        check2 = self.ram[self.pc + 2 as usize];
                     }
                     _ => {}
                 }
 
                 if check < check2 {
-                    let dest: usize = ram[i + 3 as usize] as usize;
-                    ram[dest] = 1;
+                    let dest: usize = self.ram[self.pc + 3 as usize] as usize;
+                    self.ram[dest] = 1;
                 } else {
-                    let dest: usize = ram[i + 3 as usize] as usize;
-                    ram[dest] = 0;
+                    let dest: usize = self.ram[self.pc + 3 as usize] as usize;
+                    self.ram[dest] = 0;
                 }
-                i += 4;
+                self.pc += 4;
             }
             8 => {
                 // EQ
@@ -210,32 +215,32 @@ pub fn intcode_vm(input: &[i32], mut input_vec: Vec<i32>) -> (Vec<i32>, Vec<i32>
 
                 match param_modes[0] {
                     0 => {
-                        check = ram[ram[i + 1 as usize] as usize];
+                        check = self.ram[self.ram[self.pc + 1 as usize] as usize];
                     }
                     1 => {
-                        check = ram[i + 1 as usize];
+                        check = self.ram[self.pc + 1 as usize];
                     }
                     _ => {}
                 }
 
                 match param_modes[1] {
                     0 => {
-                        check2 = ram[ram[i + 2 as usize] as usize];
+                        check2 = self.ram[self.ram[self.pc + 2 as usize] as usize];
                     }
                     1 => {
-                        check2 = ram[i + 2 as usize];
+                        check2 = self.ram[self.pc + 2 as usize];
                     }
                     _ => {}
                 }
 
                 if check == check2 {
-                    let dest: usize = ram[i + 3 as usize] as usize;
-                    ram[dest] = 1;
+                    let dest: usize = self.ram[self.pc + 3 as usize] as usize;
+                    self.ram[dest] = 1;
                 } else {
-                    let dest: usize = ram[i + 3 as usize] as usize;
-                    ram[dest] = 0;
+                    let dest: usize = self.ram[self.pc + 3 as usize] as usize;
+                    self.ram[dest] = 0;
                 }
-                i += 4;
+                self.pc += 4;
             }
             99 => {
                 break;
@@ -246,7 +251,14 @@ pub fn intcode_vm(input: &[i32], mut input_vec: Vec<i32>) -> (Vec<i32>, Vec<i32>
             }
         }
     }
-    (ram, output)
+  }
+}
+
+
+pub fn intcode_vm(input: &[i32], mut input_vec: Vec<i32>) -> (Vec<i32>, Vec<i32>) {
+    let mut vm: VM = VM {ram: input.to_vec(), pc: 0, output: Vec::new(), input: input_vec.clone()};
+    vm.run();
+    (vm.ram, vm.output)
 }
 
 #[cfg(test)]
