@@ -11,50 +11,55 @@ pub mod day5;
 pub mod day6;
 pub mod day7;
 pub mod day8;
+pub mod day9;
 
 aoc_lib! { year = 2019 }
 
-pub fn input_generator(input: &str) -> Vec<i32> {
+pub fn input_generator(input: &str) -> Vec<i64> {
     input
         .split(",")
-        .map(|x| x.parse::<i32>().unwrap())
+        .map(|x| x.parse::<i64>().unwrap())
         .collect()
 }
 
 pub struct VM {
-    ram: Vec<i32>,
+    ram: Vec<i64>,
     pc: usize,
-    pub output: Vec<i32>,
-    pub input: Vec<i32>,
+    pub output: Vec<i64>,
+    pub input: Vec<i64>,
     label: String,
     blocked: bool,
+    relative_base: i64,
 }
 
 impl VM {
     fn run(&mut self) -> () {
         loop {
-            let opcode: i32 = self.ram[self.pc] % 100;
-            let param_modes: Vec<i32> = vec![
+            let opcode: i64 = self.ram[self.pc] % 100;
+            let param_modes: Vec<i64> = vec![
                 (self.ram[self.pc] / 100) % 10,
                 (self.ram[self.pc] / 1000) % 10,
                 (self.ram[self.pc] / 10000) % 10,
             ];
-
+            // println!("{:?}, {:?}", opcode, param_modes);
             match opcode {
                 1 => {
                     // ADD
-                    let dest: usize = self.ram[self.pc + 3] as usize;
+                    let mut dest: usize = 0;
                     let src1: usize = self.ram[self.pc + 1] as usize;
                     let src2: usize = self.ram[self.pc + 2] as usize;
-                    let mut val1: i32 = 0;
-                    let mut val2: i32 = 0;
+                    let mut val1: i64 = 0;
+                    let mut val2: i64 = 0;
 
                     match param_modes[0] {
                         0 => {
                             val1 = self.ram[src1];
                         }
                         1 => {
-                            val1 = src1 as i32;
+                            val1 = src1 as i64;
+                        }
+                        2 => {
+                            val1 = self.ram[(src1 as i64 + self.relative_base) as usize];
                         }
                         _ => {}
                     }
@@ -63,7 +68,22 @@ impl VM {
                             val2 = self.ram[src2];
                         }
                         1 => {
-                            val2 = src2 as i32;
+                            val2 = src2 as i64;
+                        }
+                        2 => {
+                            val2 = self.ram[(src2 as i64 + self.relative_base) as usize];
+                        }
+                        _ => {}
+                    }
+                    match param_modes[2] {
+                        0 => {
+                            dest = self.ram[self.pc + 3] as usize;
+                        }
+                        1 => {
+                            dest = self.ram[self.pc + 3] as usize;
+                        }
+                        2 => {
+                            dest = (self.ram[self.pc + 3] + self.relative_base) as usize;
                         }
                         _ => {}
                     }
@@ -72,11 +92,11 @@ impl VM {
                 }
                 2 => {
                     // MUL
-                    let dest: usize = self.ram[self.pc + 3] as usize;
+                    let mut dest: usize = 0;
                     let src1: usize = self.ram[self.pc + 1] as usize;
                     let src2: usize = self.ram[self.pc + 2] as usize;
-                    let mut val1: i32 = 0;
-                    let mut val2: i32 = 0;
+                    let mut val1: i64 = 0;
+                    let mut val2: i64 = 0;
 
                     // TODO DRY
                     match param_modes[0] {
@@ -84,7 +104,10 @@ impl VM {
                             val1 = self.ram[src1];
                         }
                         1 => {
-                            val1 = src1 as i32;
+                            val1 = src1 as i64;
+                        }
+                        2 => {
+                            val1 = self.ram[(src1 as i64 + self.relative_base) as usize];
                         }
                         _ => {}
                     }
@@ -93,7 +116,22 @@ impl VM {
                             val2 = self.ram[src2];
                         }
                         1 => {
-                            val2 = src2 as i32;
+                            val2 = src2 as i64;
+                        }
+                        2 => {
+                            val2 = self.ram[(src2 as i64 + self.relative_base) as usize];
+                        }
+                        _ => {}
+                    }
+                    match param_modes[2] {
+                        0 => {
+                            dest = self.ram[self.pc + 3] as usize;
+                        }
+                        1 => {
+                            dest = self.ram[self.pc + 3] as usize;
+                        }
+                        2 => {
+                            dest = (self.ram[self.pc + 3] + self.relative_base) as usize;
                         }
                         _ => {}
                     }
@@ -102,7 +140,23 @@ impl VM {
                 }
                 3 => {
                     // IN
-                    let dest: usize = self.ram[self.pc + 1] as usize;
+                    let dest: usize;
+
+                    match param_modes[0] {
+                        0 => {
+                            dest = self.ram[self.pc + 1] as usize;
+                        }
+                        1 => {
+                            dest = self.ram[self.pc + 1] as usize;
+                        }
+                        2 => {
+                            dest = (self.ram[self.pc + 1] + self.relative_base) as usize;
+                        }
+                        _ => {
+                            dest = 0;
+                        }
+                    }
+
                     if let Some(x) = self.input.pop() {
                         self.blocked = false;
                         self.ram[dest] = x;
@@ -123,6 +177,12 @@ impl VM {
                         1 => {
                             self.output.push(self.ram[self.pc + 1]);
                         }
+                        2 => {
+                            self.output.push(
+                                self.ram[(self.ram[self.pc + 1 as usize] + self.relative_base)
+                                    as usize],
+                            );
+                        }
                         _ => {}
                     }
 
@@ -130,7 +190,7 @@ impl VM {
                 }
                 5 => {
                     // JNZ
-                    let mut check: i32 = 0;
+                    let mut check: i64 = 0;
 
                     match param_modes[0] {
                         0 => {
@@ -138,6 +198,10 @@ impl VM {
                         }
                         1 => {
                             check = self.ram[self.pc + 1 as usize];
+                        }
+                        2 => {
+                            check = self.ram
+                                [(self.ram[self.pc + 1 as usize] + self.relative_base) as usize];
                         }
                         _ => {}
                     }
@@ -151,6 +215,11 @@ impl VM {
                             1 => {
                                 self.pc = self.ram[self.pc + 2 as usize] as usize;
                             }
+                            2 => {
+                                self.pc = self.ram
+                                    [(self.ram[self.pc + 2 as usize] + self.relative_base) as usize]
+                                    as usize;
+                            }
                             _ => {}
                         }
                     } else {
@@ -159,7 +228,7 @@ impl VM {
                 }
                 6 => {
                     // JEZ
-                    let mut check: i32 = 0;
+                    let mut check: i64 = 0;
 
                     match param_modes[0] {
                         0 => {
@@ -167,6 +236,10 @@ impl VM {
                         }
                         1 => {
                             check = self.ram[self.pc + 1 as usize];
+                        }
+                        2 => {
+                            check = self.ram
+                                [(self.ram[self.pc + 1 as usize] + self.relative_base) as usize];
                         }
                         _ => {}
                     }
@@ -180,6 +253,11 @@ impl VM {
                             1 => {
                                 self.pc = self.ram[self.pc + 2 as usize] as usize;
                             }
+                            2 => {
+                                self.pc = self.ram
+                                    [(self.ram[self.pc + 2 as usize] + self.relative_base) as usize]
+                                    as usize;
+                            }
                             _ => {}
                         }
                     } else {
@@ -188,42 +266,62 @@ impl VM {
                 }
                 7 => {
                     // LT
-                    let mut check: i32 = 0;
-                    let mut check2: i32 = 0;
+                    let mut check: i64 = 0;
+                    let mut check2: i64 = 0;
+                    let mut dest: usize = 0;
 
                     match param_modes[0] {
                         0 => {
                             check = self.ram[self.ram[self.pc + 1 as usize] as usize];
                         }
                         1 => {
-                            check = self.ram[self.pc + 1 as usize];
+                            check = self.ram[self.pc + 1];
+                        }
+                        2 => {
+                            check = self.ram[(self.ram[self.pc + 1] + self.relative_base) as usize];
                         }
                         _ => {}
                     }
 
                     match param_modes[1] {
                         0 => {
-                            check2 = self.ram[self.ram[self.pc + 2 as usize] as usize];
+                            check2 = self.ram[self.ram[self.pc + 2] as usize];
                         }
                         1 => {
-                            check2 = self.ram[self.pc + 2 as usize];
+                            check2 = self.ram[self.pc + 2];
+                        }
+                        2 => {
+                            check2 =
+                                self.ram[(self.ram[self.pc + 2] + self.relative_base) as usize];
+                        }
+                        _ => {}
+                    }
+
+                    match param_modes[2] {
+                        0 => {
+                            dest = self.ram[self.pc + 3 as usize] as usize;
+                        }
+                        1 => {
+                            dest = self.ram[self.pc + 3 as usize] as usize;
+                        }
+                        2 => {
+                            dest = (self.ram[self.pc + 3 as usize] + self.relative_base) as usize;
                         }
                         _ => {}
                     }
 
                     if check < check2 {
-                        let dest: usize = self.ram[self.pc + 3 as usize] as usize;
                         self.ram[dest] = 1;
                     } else {
-                        let dest: usize = self.ram[self.pc + 3 as usize] as usize;
                         self.ram[dest] = 0;
                     }
                     self.pc += 4;
                 }
                 8 => {
                     // EQ
-                    let mut check: i32 = 0;
-                    let mut check2: i32 = 0;
+                    let mut check: i64 = 0;
+                    let mut check2: i64 = 0;
+                    let mut dest: usize = 0;
 
                     match param_modes[0] {
                         0 => {
@@ -231,6 +329,10 @@ impl VM {
                         }
                         1 => {
                             check = self.ram[self.pc + 1 as usize];
+                        }
+                        2 => {
+                            check = self.ram
+                                [(self.ram[self.pc + 1 as usize] + self.relative_base) as usize];
                         }
                         _ => {}
                     }
@@ -242,17 +344,51 @@ impl VM {
                         1 => {
                             check2 = self.ram[self.pc + 2 as usize];
                         }
+                        2 => {
+                            check2 = self.ram
+                                [(self.ram[self.pc + 2 as usize] + self.relative_base) as usize];
+                        }
+                        _ => {}
+                    }
+
+                    match param_modes[2] {
+                        0 => {
+                            dest = self.ram[self.pc + 3] as usize;
+                        }
+                        1 => {
+                            dest = self.ram[self.pc + 3] as usize;
+                        }
+                        2 => {
+                            dest = (self.ram[self.pc + 3] + self.relative_base) as usize;
+                        }
                         _ => {}
                     }
 
                     if check == check2 {
-                        let dest: usize = self.ram[self.pc + 3 as usize] as usize;
                         self.ram[dest] = 1;
                     } else {
-                        let dest: usize = self.ram[self.pc + 3 as usize] as usize;
                         self.ram[dest] = 0;
                     }
                     self.pc += 4;
+                }
+                9 => {
+                    // Increment relative base
+                    let mut val: i64 = 0;
+                    match param_modes[0] {
+                        0 => {
+                            val = self.ram[self.ram[self.pc + 1] as usize];
+                        }
+                        1 => {
+                            val = self.ram[self.pc + 1];
+                        }
+                        2 => {
+                            val = self.ram[(self.ram[self.pc + 1] + self.relative_base) as usize];
+                        }
+                        _ => {}
+                    }
+
+                    self.relative_base += val;
+                    self.pc += 2;
                 }
                 99 => {
                     // println!("Terminating: {}", self.label);
@@ -267,7 +403,7 @@ impl VM {
     }
 }
 
-pub fn intcode_vm(input: &[i32], input_vec: Vec<i32>) -> (Vec<i32>, Vec<i32>) {
+pub fn intcode_vm(input: &[i64], input_vec: Vec<i64>) -> (Vec<i64>, Vec<i64>) {
     let mut vm: VM = VM {
         ram: input.to_vec(),
         pc: 0,
@@ -275,7 +411,9 @@ pub fn intcode_vm(input: &[i32], input_vec: Vec<i32>) -> (Vec<i32>, Vec<i32>) {
         input: input_vec.clone(),
         label: "IntcodeVM".to_string(),
         blocked: false,
+        relative_base: 0,
     };
+    vm.ram.append(&mut vec![0; 8000]);
     vm.run();
     (vm.ram, vm.output)
 }
@@ -456,6 +594,42 @@ mod intcodevm {
         assert_eq!(
             intcode_vm(&input_generator("3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99"), vec![12]).1[0],
             1001
+        );
+    }
+    #[test]
+    fn opcode_9_1() {
+        assert_eq!(
+            intcode_vm(
+                &input_generator("109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99"),
+                vec![]
+            )
+            .1,
+            input_generator("109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99")
+        );
+    }
+    #[test]
+    fn opcode_9_2() {
+        assert_eq!(
+            (intcode_vm(
+                &input_generator("1102,34915192,34915192,7,4,7,99,0"),
+                vec![]
+            )
+            .1
+            .pop()
+            .unwrap() as f64)
+                .log10()
+                .floor() as i64,
+            15
+        );
+    }
+    #[test]
+    fn opcode_9_3() {
+        assert_eq!(
+            intcode_vm(&input_generator("104,1125899906842624,99"), vec![])
+                .1
+                .pop()
+                .unwrap(),
+            1125899906842624
         );
     }
 }

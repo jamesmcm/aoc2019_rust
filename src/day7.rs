@@ -2,17 +2,17 @@ use crate::intcode_vm;
 use crate::VM;
 
 #[aoc_generator(day7)]
-pub fn input_generator(input: &str) -> Vec<i32> {
+pub fn input_generator(input: &str) -> Vec<i64> {
     input
         .split(",")
-        .map(|x| x.parse::<i32>().unwrap())
+        .map(|x| x.parse::<i64>().unwrap())
         .collect()
 }
 
 #[aoc(day7, part1)]
-pub fn solve_part1(input: &[i32]) -> i32 {
-    let mut phases: Vec<Vec<i32>> = Vec::new();
-    let mut max_signal: i32 = 0;
+pub fn solve_part1(input: &[i64]) -> i64 {
+    let mut phases: Vec<Vec<i64>> = Vec::new();
+    let mut max_signal: i64 = 0;
 
     for i in 0..5 {
         for j in 0..5 {
@@ -39,18 +39,18 @@ pub fn solve_part1(input: &[i32]) -> i32 {
     }
 
     for p in phases {
-        let ram: Vec<i32> = input.to_vec();
-        let input_vec: Vec<i32> = vec![0, p[0]];
-        let output: Vec<i32> = intcode_vm(&ram, input_vec).1;
+        let ram: Vec<i64> = input.to_vec();
+        let input_vec: Vec<i64> = vec![0, p[0]];
+        let output: Vec<i64> = intcode_vm(&ram, input_vec).1;
 
-        let input_vec: Vec<i32> = vec![output[0], p[1]];
-        let output: Vec<i32> = intcode_vm(&ram, input_vec).1;
-        let input_vec: Vec<i32> = vec![output[0], p[2]];
-        let output: Vec<i32> = intcode_vm(&ram, input_vec).1;
-        let input_vec: Vec<i32> = vec![output[0], p[3]];
-        let output: Vec<i32> = intcode_vm(&ram, input_vec).1;
-        let input_vec: Vec<i32> = vec![output[0], p[4]];
-        let output: Vec<i32> = intcode_vm(&ram, input_vec).1;
+        let input_vec: Vec<i64> = vec![output[0], p[1]];
+        let output: Vec<i64> = intcode_vm(&ram, input_vec).1;
+        let input_vec: Vec<i64> = vec![output[0], p[2]];
+        let output: Vec<i64> = intcode_vm(&ram, input_vec).1;
+        let input_vec: Vec<i64> = vec![output[0], p[3]];
+        let output: Vec<i64> = intcode_vm(&ram, input_vec).1;
+        let input_vec: Vec<i64> = vec![output[0], p[4]];
+        let output: Vec<i64> = intcode_vm(&ram, input_vec).1;
         if output[0] > max_signal {
             max_signal = output[0];
         }
@@ -61,10 +61,10 @@ pub fn solve_part1(input: &[i32]) -> i32 {
 }
 
 #[aoc(day7, part2)]
-pub fn solve_part2(input: &[i32]) -> i32 {
-    let mut phases: Vec<Vec<i32>> = Vec::new();
-    let mut max_phases: Vec<i32> = Vec::new();
-    let mut max_signal: i32 = 0;
+pub fn solve_part2(input: &[i64]) -> i64 {
+    let mut phases: Vec<Vec<i64>> = Vec::new();
+    let mut max_phases: Vec<i64> = Vec::new();
+    let mut max_signal: i64 = 0;
 
     for i in 5..10 {
         for j in 5..10 {
@@ -92,7 +92,7 @@ pub fn solve_part2(input: &[i32]) -> i32 {
 
     for p in phases {
         let mut vms: Vec<VM> = Vec::new();
-        let mut output: i32;
+        let mut output: i64;
         // Initialise with phases
         for x in 1..6 {
             vms.push(VM {
@@ -102,6 +102,7 @@ pub fn solve_part2(input: &[i32]) -> i32 {
                 input: Vec::new(),
                 label: ("VM".to_string() + &x.to_string()),
                 blocked: false,
+                relative_base: 0,
             });
         }
 
