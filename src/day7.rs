@@ -60,7 +60,6 @@ pub fn solve_part1(input: &[i32]) -> i32 {
     max_signal
 }
 
-
 #[aoc(day7, part2)]
 pub fn solve_part2(input: &[i32]) -> i32 {
     let mut phases: Vec<Vec<i32>> = Vec::new();
@@ -95,61 +94,80 @@ pub fn solve_part2(input: &[i32]) -> i32 {
         let mut vms: Vec<VM> = Vec::new();
         let mut output: i32;
         // Initialise with phases
-        for x in 1 .. 6 {
-        vms.push(VM{
-        ram: input.to_vec(),
-        pc: 0,
-        output: Vec::new(),
-        input: Vec::new(),
-        label: ("VM".to_string() + &x.to_string()),
-        blocked: false,
-        }
-        );
+        for x in 1..6 {
+            vms.push(VM {
+                ram: input.to_vec(),
+                pc: 0,
+                output: Vec::new(),
+                input: Vec::new(),
+                label: ("VM".to_string() + &x.to_string()),
+                blocked: false,
+            });
         }
 
         vms[0].input = vec![0, p[0]];
         vms[0].run();
-        if vms[0].output.len() > 1 {println!("Bad len VM1 output: {:?}", vms[0].output);}
+        if vms[0].output.len() > 1 {
+            println!("Bad len VM1 output: {:?}", vms[0].output);
+        }
         output = vms[0].output.pop().unwrap();
         vms[1].input = vec![output, p[1]];
         vms[1].run();
-        if vms[1].output.len() > 1 {println!("Bad len VM2 output: {:?}", vms[1].output);}
+        if vms[1].output.len() > 1 {
+            println!("Bad len VM2 output: {:?}", vms[1].output);
+        }
         output = vms[1].output.pop().unwrap();
         vms[2].input = vec![output, p[2]];
         vms[2].run();
-        if vms[2].output.len() > 1 {println!("Bad len VM3 output: {:?}", vms[2].output);}
+        if vms[2].output.len() > 1 {
+            println!("Bad len VM3 output: {:?}", vms[2].output);
+        }
         output = vms[2].output.pop().unwrap();
         vms[3].input = vec![output, p[3]];
         vms[3].run();
-        if vms[3].output.len() > 1 {println!("Bad len VM4 output: {:?}", vms[3].output);}
+        if vms[3].output.len() > 1 {
+            println!("Bad len VM4 output: {:?}", vms[3].output);
+        }
         output = vms[3].output.pop().unwrap();
         vms[4].input = vec![output, p[4]];
         vms[4].run();
-        if vms[4].output.len() > 1 {println!("Bad len VM5 output: {:?}", vms[4].output);}
+        if vms[4].output.len() > 1 {
+            println!("Bad len VM5 output: {:?}", vms[4].output);
+        }
         output = vms[4].output.pop().unwrap();
 
         while vms[0].blocked {
-        vms[0].input = vec![output];
-        vms[0].run();
-        if vms[0].output.len() > 1 {println!("Bad len VM1 output: {:?}", vms[0].output);}
-        output = vms[0].output.pop().unwrap();
-        vms[1].input = vec![output];
-        vms[1].run();
-        if vms[1].output.len() > 1 {println!("Bad len VM2 output: {:?}", vms[1].output);}
-        output = vms[1].output.pop().unwrap();
-        vms[2].input = vec![output];
-        vms[2].run();
-        if vms[2].output.len() > 1 {println!("Bad len VM3 output: {:?}", vms[2].output);}
-        output = vms[2].output.pop().unwrap();
-        vms[3].input = vec![output];
-        vms[3].run();
-        if vms[3].output.len() > 1 {println!("Bad len VM4 output: {:?}", vms[3].output);}
-        output = vms[3].output.pop().unwrap();
-        vms[4].input = vec![output];
-        vms[4].run();
-        if vms[4].output.len() > 1 {println!("Bad len VM5 output: {:?}", vms[4].output);}
-        output = vms[4].output.pop().unwrap();
-          }
+            vms[0].input = vec![output];
+            vms[0].run();
+            if vms[0].output.len() > 1 {
+                println!("Bad len VM1 output: {:?}", vms[0].output);
+            }
+            output = vms[0].output.pop().unwrap();
+            vms[1].input = vec![output];
+            vms[1].run();
+            if vms[1].output.len() > 1 {
+                println!("Bad len VM2 output: {:?}", vms[1].output);
+            }
+            output = vms[1].output.pop().unwrap();
+            vms[2].input = vec![output];
+            vms[2].run();
+            if vms[2].output.len() > 1 {
+                println!("Bad len VM3 output: {:?}", vms[2].output);
+            }
+            output = vms[2].output.pop().unwrap();
+            vms[3].input = vec![output];
+            vms[3].run();
+            if vms[3].output.len() > 1 {
+                println!("Bad len VM4 output: {:?}", vms[3].output);
+            }
+            output = vms[3].output.pop().unwrap();
+            vms[4].input = vec![output];
+            vms[4].run();
+            if vms[4].output.len() > 1 {
+                println!("Bad len VM5 output: {:?}", vms[4].output);
+            }
+            output = vms[4].output.pop().unwrap();
+        }
 
         if output > max_signal {
             max_signal = output;
@@ -160,7 +178,6 @@ pub fn solve_part2(input: &[i32]) -> i32 {
     println!("{:?}: {:?}", max_signal, max_phases);
     max_signal
 }
-
 
 #[cfg(test)]
 mod tests {

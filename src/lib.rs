@@ -31,7 +31,7 @@ pub struct VM {
 
 impl VM {
     fn run(&mut self) -> () {
-       loop {
+        loop {
             let opcode: i32 = self.ram[self.pc] % 100;
             let param_modes: Vec<i32> = vec![
                 (self.ram[self.pc] / 100) % 10,
@@ -103,14 +103,13 @@ impl VM {
                     // IN
                     let dest: usize = self.ram[self.pc + 1] as usize;
                     if let Some(x) = self.input.pop() {
-                    self.blocked = false;
-                    self.ram[dest] = x;
-                    self.pc += 2;
-                    }
-                    else {
-                      // println!("Blocking for input: {}", self.label);
-                      self.blocked = true;
-                      break;
+                        self.blocked = false;
+                        self.ram[dest] = x;
+                        self.pc += 2;
+                    } else {
+                        // println!("Blocking for input: {}", self.label);
+                        self.blocked = true;
+                        break;
                     }
                 }
                 4 => {
