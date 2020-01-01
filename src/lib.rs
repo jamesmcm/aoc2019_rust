@@ -20,16 +20,18 @@ pub fn input_generator(input: &str) -> Vec<i32> {
         .collect()
 }
 
-struct VM {
+pub struct VM {
     ram: Vec<i32>,
     pc: usize,
-    output: Vec<i32>,
-    input: Vec<i32>,
+    pub output: Vec<i32>,
+    pub input: Vec<i32>,
+    label: String,
+    blocked: bool,
 }
 
 impl VM {
     fn run(&mut self) -> () {
-        while self.ram[self.pc] != 99 {
+       loop {
             let opcode: i32 = self.ram[self.pc] % 100;
             let param_modes: Vec<i32> = vec![
                 (self.ram[self.pc] / 100) % 10,
@@ -100,8 +102,16 @@ impl VM {
                 3 => {
                     // IN
                     let dest: usize = self.ram[self.pc + 1] as usize;
-                    self.ram[dest] = self.input.pop().unwrap();
+                    if let Some(x) = self.input.pop() {
+                    self.blocked = false;
+                    self.ram[dest] = x;
                     self.pc += 2;
+                    }
+                    else {
+                      // println!("Blocking for input: {}", self.label);
+                      self.blocked = true;
+                      break;
+                    }
                 }
                 4 => {
                     // OUT
@@ -245,10 +255,11 @@ impl VM {
                     self.pc += 4;
                 }
                 99 => {
+                    // println!("Terminating: {}", self.label);
                     break;
                 }
                 _ => {
-                    println! {"Error"};
+                    println! {"Error: {}, opcode: {:?}", self.label, opcode};
                     break;
                 }
             }
@@ -262,6 +273,8 @@ pub fn intcode_vm(input: &[i32], input_vec: Vec<i32>) -> (Vec<i32>, Vec<i32>) {
         pc: 0,
         output: Vec::new(),
         input: input_vec.clone(),
+        label: "IntcodeVM".to_string(),
+        blocked: false,
     };
     vm.run();
     (vm.ram, vm.output)
