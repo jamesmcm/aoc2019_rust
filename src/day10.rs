@@ -165,17 +165,19 @@ fn get_destroyed(input: &(Space, Vec<Asteroid>), pos: (usize, usize)) -> Vec<(As
         .map(|c| {
             let mut angle: f64 = ((c.y as f64 - a.y as f64) as f64).atan2(c.x as f64 - a.x as f64);
 
-            if (angle >= 0.0 && angle <= PI / 2.0) {
+            if angle >= 0.0 && angle <= PI / 2.0 {
                 angle = (PI / 2.0) - angle;
             } else {
-                if (angle > PI / 2.0) {
+                if angle > PI / 2.0 {
                     angle = (2.0 * PI) - angle;
                 } else {
                     angle = angle.abs() + (PI / 2.0);
                 }
             }
 
-            if c.x == a.x {angle = 0.0;}
+            if c.x == a.x {
+                angle = 0.0;
+            }
             (c, angle)
         })
         .collect();
