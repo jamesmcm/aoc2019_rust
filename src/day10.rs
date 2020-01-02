@@ -39,7 +39,7 @@ pub fn input_generator(input: &str) -> (Space, Vec<Asteroid>) {
 
 #[aoc(day10, part1)]
 pub fn solve_part1(input: &(Space, Vec<Asteroid>)) -> usize {
-    let mut asteroids: Vec<Asteroid> = input.1.clone();
+    let asteroids: Vec<Asteroid> = input.1.clone();
     let width: usize = input.0.width;
     let height: usize = input.0.height;
 
@@ -61,14 +61,14 @@ pub fn solve_part1(input: &(Space, Vec<Asteroid>)) -> usize {
             let mut posx: isize = a.x as isize + (2 * diffx);
             let mut posy: isize = a.y as isize + (2 * diffy);
             // Repeat and pop from set until OOB
-            while ((posx >= 0 && posx < width as isize) && (posy >= 0 && posy < height as isize)) {
-                if (((a.x as isize - b.x as isize).signum()
+            while (posx >= 0 && posx < width as isize) && (posy >= 0 && posy < height as isize) {
+                if ((a.x as isize - b.x as isize).signum()
                     != (posx as isize - b.x as isize).signum()
                     || (posx as isize - b.x as isize).signum() == 0)
                     && ((a.y as isize - b.y as isize).signum()
                         != (posy as isize - b.y as isize).signum()
                         || (posy as isize - b.y as isize).signum() == 0)
-                    && !(posx == b.x as isize && posy == b.y as isize))
+                    && !(posx == b.x as isize && posy == b.y as isize)
                 {
                     let test: Asteroid = Asteroid {
                         y: posy as usize,
@@ -114,7 +114,7 @@ mod day10tests {
     fn sample2() {
         assert_eq!(
             solve_part1(&input_generator(
-            "......#.#.
+                "......#.#.
 #..#.#....
 ..#######.
 .#.#.###..
@@ -132,7 +132,7 @@ mod day10tests {
     fn sample3() {
         assert_eq!(
             solve_part1(&input_generator(
-            "#.#...#.#.
+                "#.#...#.#.
 .###....#.
 .#....#...
 ##.#.#.#.#
@@ -150,7 +150,7 @@ mod day10tests {
     fn sample4() {
         assert_eq!(
             solve_part1(&input_generator(
-            ".#..#..###
+                ".#..#..###
 ####.###.#
 ....###.#.
 ..###.##.#
@@ -168,7 +168,7 @@ mod day10tests {
     fn sample5() {
         assert_eq!(
             solve_part1(&input_generator(
-            ".#..##.###...#######
+                ".#..##.###...#######
 ##.############..##.
 .#.######.########.#
 .###.#######.####.#.
@@ -188,10 +188,8 @@ mod day10tests {
 .#.#.###########.###
 #.#.#.#####.####.###
 ###.##.####.##.#..##"
-                 )),
+            )),
             210
         );
     }
-
-
 }
