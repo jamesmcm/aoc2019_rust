@@ -1,3 +1,6 @@
+#[macro_use] extern crate macro_attr;
+#[macro_use] extern crate enum_derive;
+
 extern crate aoc_runner;
 
 #[macro_use]
@@ -5,6 +8,7 @@ extern crate aoc_runner_derive;
 
 pub mod day1;
 pub mod day10;
+pub mod day11;
 pub mod day2;
 pub mod day3;
 pub mod day4;
@@ -34,6 +38,21 @@ pub struct VM {
 }
 
 impl VM {
+    fn new(program: Vec<i64>, input: Vec<i64>, label: String) -> VM {
+    let mut vm: VM = VM {
+        ram: program,
+        pc: 0,
+        output: Vec::new(),
+        input: input.clone(),
+        label: label.clone(),
+        blocked: false,
+        relative_base: 0,
+    };
+    vm.ram.append(&mut vec![0; 8000]);
+    vm
+    }
+
+
     fn run(&mut self) -> () {
         loop {
             let opcode: i64 = self.ram[self.pc] % 100;
