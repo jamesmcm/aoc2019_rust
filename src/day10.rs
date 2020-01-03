@@ -110,12 +110,13 @@ fn get_destroyed(input: &(Space, Vec<Asteroid>), pos: (usize, usize)) -> Vec<(As
     let height: usize = input.0.height;
 
     let mut existing: HashSet<Asteroid> = HashSet::from_iter(input.1.iter().cloned());
-    let mut destroyed: Vec<Asteroid> = Vec::new();
+    let mut destroyed_total: Vec<Vec<(Asteroid, f64)>> = Vec::new();
 
     let a: Asteroid = Asteroid { y: pos.1, x: pos.0 };
 
     while existing.len() > 1 {
         let mut set: HashSet<Asteroid> = HashSet::from_iter(existing.iter().cloned());
+        let mut destroyed: Vec<Asteroid> = Vec::new();
 
         set.remove(&a);
         for b in set.clone() {
@@ -157,34 +158,48 @@ fn get_destroyed(input: &(Space, Vec<Asteroid>), pos: (usize, usize)) -> Vec<(As
             destroyed.push(d);
         }
         // TODO: Sort here
+        let mut sorted: Vec<(Asteroid, f64)> = destroyed
+            .iter()
+            .cloned()
+            .map(|c| {
+                let mut angle: f64 = ((((height - 1) - c.y) as f64 - ((height - 1) - a.y) as f64)
+                    as f64)
+                    .atan2(c.x as f64 - a.x as f64);
+
+                if angle >= 0.0 && angle <= PI / 2.0 {
+                    angle = (PI / 2.0) - angle;
+                } else {
+                    if angle > PI / 2.0 {
+                        angle = (7.0 * (PI / 2.0)) - angle;
+                    } else {
+                        angle = angle.abs() + (PI / 2.0);
+                    }
+                }
+
+                if c.x == a.x && c.y < a.y {
+                    angle = 0.0;
+                }
+                if c.x == a.x && c.y > a.y {
+                    angle = PI;
+                }
+                if c.x < a.x && c.y == a.y {
+                    angle = 3.0 * (PI / 2.0);
+                }
+                if c.x > a.x && c.y == a.y {
+                    angle = PI / 2.0;
+                }
+                (c, angle)
+            })
+            .collect();
+
+        sorted.sort_by(|c, d| c.1.partial_cmp(&d.1).unwrap());
+        destroyed_total.push(sorted.clone());
     }
 
-    let mut sorted: Vec<(Asteroid, f64)> = destroyed
-        .iter()
-        .cloned()
-        .map(|c| {
-            let mut angle: f64 = ((c.y as f64 - a.y as f64) as f64).atan2(c.x as f64 - a.x as f64);
-
-            if angle >= 0.0 && angle <= PI / 2.0 {
-                angle = (PI / 2.0) - angle;
-            } else {
-                if angle > PI / 2.0 {
-                    angle = (2.0 * PI) - angle;
-                } else {
-                    angle = angle.abs() + (PI / 2.0);
-                }
-            }
-
-            if c.x == a.x {
-                angle = 0.0;
-            }
-            (c, angle)
-        })
-        .collect();
-
-    sorted.sort_by(|c, d| c.1.partial_cmp(&d.1).unwrap());
-    println!("{:?}", sorted);
-    sorted
+    for (i, f) in destroyed_total.iter().cloned().flatten().enumerate() {
+        println!("{:?}: {:?} - {:?}", i + 1, (f.0.x, f.0.y), f.1);
+    }
+    destroyed_total.iter().cloned().flatten().collect()
 }
 
 #[cfg(test)]
@@ -316,6 +331,23 @@ mod day10tests {
     }
     #[test]
     fn sample7() {
+        assert_eq!(
+            get_destroyed(
+                &input_generator(
+                    ".#....#####...#..
+##...##.#####..##
+##...#...#.#####.
+..#.....#...###..
+..#.#.....#....##"
+                ),
+                (8, 3)
+            )[0]
+            .0,
+            Asteroid { y: 1, x: 8 }
+        );
+    }
+    #[test]
+    fn sample8() {
         assert_eq!(
             get_destroyed(
                 &input_generator(
