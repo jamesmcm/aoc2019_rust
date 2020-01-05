@@ -143,49 +143,52 @@ pub fn solve_part2(input: &Vec<Planet>) -> u64 {
             p1.update_position();
         }
 
-        if planets
-            .iter()
-            .map(|p| (p.position.0, p.velocity.0))
-            .collect::<Vec<(i64, i64)>>()
-            == start
+        if periods.0.is_none() {
+            if planets
                 .iter()
                 .map(|p| (p.position.0, p.velocity.0))
                 .collect::<Vec<(i64, i64)>>()
-        {
-            periods.0 = Some(i);
+                == start
+                    .iter()
+                    .map(|p| (p.position.0, p.velocity.0))
+                    .collect::<Vec<(i64, i64)>>()
+            {
+                periods.0 = Some(i);
+            }
         }
-        if planets
-            .iter()
-            .map(|p| (p.position.1, p.velocity.1))
-            .collect::<Vec<(i64, i64)>>()
-            == start
+        if periods.1.is_none() {
+            if planets
                 .iter()
                 .map(|p| (p.position.1, p.velocity.1))
                 .collect::<Vec<(i64, i64)>>()
-        {
-            periods.1 = Some(i);
+                == start
+                    .iter()
+                    .map(|p| (p.position.1, p.velocity.1))
+                    .collect::<Vec<(i64, i64)>>()
+            {
+                periods.1 = Some(i);
+            }
         }
-        if planets
-            .iter()
-            .map(|p| (p.position.2, p.velocity.2))
-            .collect::<Vec<(i64, i64)>>()
-            == start
+        if periods.2.is_none() {
+            if planets
                 .iter()
                 .map(|p| (p.position.2, p.velocity.2))
                 .collect::<Vec<(i64, i64)>>()
-        {
-            periods.2 = Some(i);
+                == start
+                    .iter()
+                    .map(|p| (p.position.2, p.velocity.2))
+                    .collect::<Vec<(i64, i64)>>()
+            {
+                periods.2 = Some(i);
+            }
         }
 
         i += 1;
     }
-    // (periods.0.unwrap().lcm(&periods.1.unwrap())).lcm(&periods.2.unwrap())
-    println!("{:?}", periods);
     periods
         .0
         .unwrap()
         .lcm(&(periods.1.unwrap().lcm(&periods.2.unwrap())))
-    //periods.0.unwrap() * periods.1.unwrap() * periods.2.unwrap()
 }
 
 #[cfg(test)]
