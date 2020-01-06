@@ -15,10 +15,11 @@ pub struct Process {
     pub input: HashMap<String, u64>,
     pub output: (String, u64),
     pub ore_cost: u64,
+    pub score: u32,
 }
 
-const COST_LIMIT: u64 = 200;
-const PATH_LIMIT: u32 = 200;
+const COST_LIMIT: u64 = 15000;
+const PATH_LIMIT: u32 = 20;
 static MIN_COST: AtomicU64 = AtomicU64::new(COST_LIMIT);
 
 #[aoc_generator(day14)]
@@ -49,39 +50,63 @@ pub fn input_generator(input: &str) -> Vec<Process> {
                 input: hm_input,
                 output: (String::from(out[1]), out[0].parse().unwrap()),
                 ore_cost,
+                score: 0,
             });
         })
         .count();
+    set_scores(&mut processes);
     processes
 }
 
-fn find_possible_processes_backwards(
+fn find_possible_processes(
     processes: &Vec<Process>,
     resources: &HashMap<String, u64>,
 ) -> Vec<Process> {
     let mut out: Vec<Process> = Vec::new();
     for p in processes {
         let mut flag: bool = true;
-        let (req, cost) = p.output.clone();
-            if req == "FUEL" {
+        for (req, cost) in p.input.iter() {
+            if req == "ORE" {
                 continue;
             }
-            if let Some(x) = resources.get(&req) {
-               // if x < &cost {
-               //     flag = false;
-               // }
+            if let Some(x) = resources.get(req) {
+                if x < cost {
+                    flag = false;
+                    break;
+                }
             } else {
                 flag = false;
+                break;
             }
+        }
         if flag {
             out.push((*p).clone());
         };
     }
-    out.sort_by(|a, b| (a.ore_cost).partial_cmp(&b.ore_cost).unwrap());
-    out.reverse();
+    out.sort_by(|a, b| (a.score).partial_cmp(&b.score).unwrap());
     out
 }
 
+fn set_scores(processes: &mut Vec<Process>){
+    let mut stack: Vec<(usize, u32)> = Vec::new();
+    let i: usize = processes.iter().position(|x| x.output.0 == "FUEL").unwrap();
+    stack.push((i, 0));
+    let mut score: u32 = 0;
+
+    while !stack.is_empty() {
+        let mut p = stack.pop().unwrap();
+        processes[p.0].score = score;
+        
+
+        for (res, _) in processes[p.0].input.iter() {
+            let i: usize = processes.iter().position(|x| x.output.0 == *res).unwrap();
+            stack.push((i, score+1));
+        }
+        score += 1;
+    }
+    
+
+}
 
 #[derive(Debug)]
 struct Job {
@@ -96,7 +121,7 @@ impl Job {
         Job {process, resources, ore_cost, step}
     }
 
-    fn process_backwards(&mut self, processes: &Vec<Process>) -> Option<Vec<Job>> {
+    fn process(&mut self, processes: &Vec<Process>) -> Option<Vec<Job>> {
 
     // update resources and ore_cost
     self.ore_cost += self.process.ore_cost;
@@ -104,41 +129,34 @@ impl Job {
         return None
     }
 
-    let (req, cost) = self.process.output.clone();
-        if req != "FUEL" {
-        if let Some(x) = (*(self.resources.get(&req).unwrap())).checked_sub(cost){
-        *(self.resources.get_mut(&req).unwrap()) -= cost;
-        } else {
-            if *(self.resources.get(&req).unwrap())>0{
-            //println!("error: {:?}", self);
-            *(self.resources.get_mut(&req).unwrap()) = 0;
-            } else {
-            return None
-            }
-    }
-        }
-    
     for (req, cost) in self.process.input.iter() {
         if req == "ORE" {
             continue;
         }
-    if self.resources.contains_key(req) {
-        *(self.resources.get_mut(req).unwrap()) += *cost;
-    } else {
-        self.resources.insert(req.clone(), *cost);
+        if let Some(x) = (*(self.resources.get(req).unwrap())).checked_sub(*cost){
+        *(self.resources.get_mut(req).unwrap()) -= cost;
+        } else {
+            println!("error {:?}", self);
+            return None
     }
+    }
+
+    if self.resources.contains_key(&self.process.output.0) {
+        *(self.resources.get_mut(&self.process.output.0).unwrap()) += self.process.output.1;
+    } else {
+        self.resources.insert(self.process.output.0.clone(), self.process.output.1);
     }
 
     if self.ore_cost >= MIN_COST.load(Ordering::Relaxed) {
         return None
     }
-    if self.resources.is_empty() || self.resources.values().sum::<u64>() == 0 {
+    if let Some(_x) = self.resources.get("FUEL") {
         MIN_COST.fetch_min(self.ore_cost, Ordering::Relaxed);
         println!("found fuel: {:?}, {:?}", self.ore_cost, MIN_COST.load(Ordering::Relaxed));
         return None
     }
     let mut out = Vec::new();
-    for p in find_possible_processes_backwards(processes, &self.resources) {
+    for p in find_possible_processes(processes, &self.resources) {
         // recurse
         out.push(Job::new(p, self.resources.clone(), self.ore_cost, self.step + 1));
     }
@@ -149,41 +167,36 @@ impl Job {
 
 
 #[aoc(day14, part1)]
-pub fn solve_part1(input: &Vec<Process>) -> u64 {
-    let mut resources: HashMap<String, u64> = HashMap::new();
+pub fn solve_part1(processes: &Vec<Process>) -> u64 {
+    let resources: HashMap<String, u64> = HashMap::new();
     let mut stack: Vec<Job> = Vec::new();
     // BFS all possible processes
     // Recursively until we find a solution and all other recursions have exceeded found cost
-    let mut processes: Vec<Process> = input.clone();
-
-    let i: usize = processes.iter().position(|x| x.output.0 == "FUEL").unwrap();
-    let startp: Process = processes.remove(i);
-    
-    let mut j1: Job = Job::new(startp, resources.clone(), 0, 0);
-    j1.process_backwards(&processes);
-    resources=j1.resources.clone();
-    let start_ore_cost: u64 = j1.ore_cost;
-
-    for p in find_possible_processes_backwards(&processes, &resources) {
-        stack.push(Job::new(p, resources.clone(), start_ore_cost, 1));
+    for p in find_possible_processes(processes, &resources) {
+        // recurse
+        // part1_recurse(p, processes, resources.clone(), 0);
+        stack.push(Job::new(p, resources.clone(), 0, 0));
     }
-    println!("{:?}", &stack);
-
     while !stack.is_empty() {
-        let newjobs: Vec<Job> = stack.iter_mut().map(|x| x.process_backwards(&processes)).filter(|x| !x.is_none()).map(|x| x.unwrap()).flatten().collect();
-
-        if MIN_COST.load(Ordering::Relaxed) != COST_LIMIT {
-            break;
+        if let Some(mut newjob) = stack.pop() {//stack.iter_mut().map(|x| x.process(&processes)).filter(|x| !x.is_none()).map(|x| x.unwrap()).flatten().collect();
+        // if MIN_COST.load(Ordering::Relaxed) != COST_LIMIT {
+        //     break;
+        // }
+        if newjob.process.score <= 2 {
+        println!("{:?}", newjob);
         }
-        stack.clear();
-        for job in newjobs {
-            stack.push(job);
+        if let Some(newjobs) = newjob.process(&processes){
+            for nj in newjobs {
+            stack.push(nj);
+            }
+        }
+        stack.sort_by(|a, b| (a.process.score).partial_cmp(&b.process.score).unwrap());
+        stack.reverse();
         }
     }
 
     MIN_COST.load(Ordering::Relaxed)
 }
-
 
 #[cfg(test)]
 mod day14tests {
