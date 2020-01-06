@@ -6,13 +6,20 @@ use regex::Regex;
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
+extern crate rayon;
+
+use rayon::prelude::*;
+
 #[derive(Debug, Clone)]
 pub struct Process {
     pub input: HashMap<String, u64>,
     pub output: (String, u64),
+    pub ore_cost: u64,
 }
 
-static MIN_COST: AtomicU64 = AtomicU64::new(2310736);
+const COST_LIMIT: u64 = 15000;
+const PATH_LIMIT: u32 = 20;
+static MIN_COST: AtomicU64 = AtomicU64::new(COST_LIMIT);
 
 #[aoc_generator(day14)]
 pub fn input_generator(input: &str) -> Vec<Process> {
@@ -34,9 +41,14 @@ pub fn input_generator(input: &str) -> Vec<Process> {
                 }
             }
             let out: Vec<&str> = p[2].unwrap().as_str().split(" ").collect();
+            let mut ore_cost: u64 = 0;
+            if let Some(x) = hm_input.remove("ORE") {
+                ore_cost = x;
+            }
             processes.push(Process {
                 input: hm_input,
                 output: (String::from(out[1]), out[0].parse().unwrap()),
+                ore_cost,
             });
         })
         .count();
@@ -68,19 +80,92 @@ fn find_possible_processes(
             out.push((*p).clone());
         };
     }
+    out.sort_by(|a, b| (a.ore_cost).partial_cmp(&b.ore_cost).unwrap());
+    //println!("{:?}, {:?}", resources, out);
     out
 }
+
+#[derive(Debug)]
+struct Job {
+    process: Process,
+    resources: HashMap<String, u64>,
+    ore_cost: u64,
+    step: u32,
+}
+
+impl Job {
+    fn new(process: Process, resources: HashMap<String, u64>, ore_cost: u64, step: u32) -> Job {
+        Job {process, resources, ore_cost, step}
+    }
+
+    fn process(&mut self, processes: &Vec<Process>) -> Option<Vec<Job>> {
+
+    // update resources and ore_cost
+    self.ore_cost += self.process.ore_cost;
+    if self.step > PATH_LIMIT {
+        return None
+    }
+
+    for (req, cost) in self.process.input.iter() {
+        if req == "ORE" {
+            continue;
+        }
+        //println!("{:?}, {:?}", (req, cost), self.resources);
+        if let Some(x) = (*(self.resources.get(req).unwrap())).checked_sub(*cost){
+        *(self.resources.get_mut(req).unwrap()) -= cost;
+        } else {
+            println!("{:?}", self);
+            return None
+    }
+    }
+
+    if self.resources.contains_key(&self.process.output.0) {
+        *(self.resources.get_mut(&self.process.output.0).unwrap()) += self.process.output.1;
+    } else {
+        self.resources.insert(self.process.output.0.clone(), self.process.output.1);
+    }
+
+    if self.ore_cost >= MIN_COST.load(Ordering::Relaxed) {
+        // println!("killed: {:?}", self.ore_cost);
+        return None
+    }
+    if let Some(_x) = self.resources.get("FUEL") {
+        MIN_COST.fetch_min(self.ore_cost, Ordering::Relaxed);
+        println!("found fuel: {:?}, {:?}", self.ore_cost, MIN_COST.load(Ordering::Relaxed));
+        return None
+    }
+    let mut out = Vec::new();
+    for p in find_possible_processes(processes, &self.resources) {
+        // recurse
+        out.push(Job::new(p, self.resources.clone(), self.ore_cost, self.step + 1));
+    }
+    Some(out)
+    }
+}
+
+
 
 #[aoc(day14, part1)]
 pub fn solve_part1(processes: &Vec<Process>) -> u64 {
     let resources: HashMap<String, u64> = HashMap::new();
-
+    let mut stack: Vec<Job> = Vec::new();
     // BFS all possible processes
     // Recursively until we find a solution and all other recursions have exceeded found cost
-    println!("{:?}", find_possible_processes(processes, &resources));
     for p in find_possible_processes(processes, &resources) {
         // recurse
-        part1_recurse(p, processes, resources.clone(), 0);
+        // part1_recurse(p, processes, resources.clone(), 0);
+        stack.push(Job::new(p, resources.clone(), 0, 0));
+    }
+    println!("{:?}", stack);
+    while !stack.is_empty() {
+        let newjobs: Vec<Job> = stack.par_iter_mut().map(|x| x.process(&processes)).filter(|x| !x.is_none()).map(|x| x.unwrap()).flatten().collect();
+        if MIN_COST.load(Ordering::Relaxed) != COST_LIMIT {
+            break;
+        }
+        stack.clear();
+        for job in newjobs {
+            stack.push(job);
+        }
     }
 
     MIN_COST.load(Ordering::Relaxed)
@@ -93,9 +178,11 @@ fn part1_recurse(
     mut ore_cost: u64,
 ) -> () {
     // update resources and ore_cost
-    if let Some(x) = process.input.get("ORE") {
-        ore_cost += x;
-    }
+    ore_cost += process.ore_cost;
+    //if let Some(x) = process.input.get("ORE") {
+    //    ore_cost += x;
+    //}
+
     for (req, cost) in process.input.iter() {
         if req == "ORE" {
             continue;
@@ -137,6 +224,20 @@ mod day14tests {
 7 A, 1 E => 1 FUEL"
             )),
             31
+        );
+    }
+    #[test]
+    fn sample1_2() {
+        assert_eq!(
+            solve_part1(&mut input_generator("9 ORE => 2 A
+8 ORE => 3 B
+7 ORE => 5 C
+3 A, 4 B => 1 AB
+5 B, 7 C => 1 BC
+4 C, 1 A => 1 CA
+2 AB, 3 BC, 4 CA => 1 FUEL"
+            )),
+            165
         );
     }
     #[test]
