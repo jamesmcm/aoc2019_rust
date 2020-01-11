@@ -58,7 +58,7 @@ pub fn input_generator(input: &str) -> Vec<Process> {
 
 fn find_possible_processes_backwards(
     processes: &Vec<Process>,
-    resources: &HashMap<String, u64>,
+    resources: &HashMap<String, i64>,
 ) -> Vec<Process> {
     let mut out: Vec<Process> = Vec::new();
     for p in processes {
@@ -84,20 +84,21 @@ fn find_possible_processes_backwards(
 }
 
 
-fn calc_total_wastage(p: &Process, r: &HashMap<String, u64>) -> u64 {
-    if let Some(x) = (p.output.1).checked_sub(*(r.get(&p.output.0).unwrap())) {x} else {0}
+fn calc_total_wastage(p: &Process, r: &HashMap<String, i64>) -> u64 {
+    let sub: i64 = p.output.1 as i64 - *(r.get(&p.output.0).unwrap());
+    if sub >= 0 {sub as u64} else {0}
 }
 
 #[derive(Debug, Clone)]
 struct Job {
     process: Process,
-    resources: HashMap<String, u64>,
+    resources: HashMap<String, i64>,
     ore_cost: u64,
     step: u32,
 }
 
 impl Job {
-    fn new(process: Process, resources: HashMap<String, u64>, ore_cost: u64, step: u32) -> Job {
+    fn new(process: Process, resources: HashMap<String, i64>, ore_cost: u64, step: u32) -> Job {
         Job {process, resources, ore_cost, step}
     }
 
@@ -111,33 +112,24 @@ impl Job {
 
     let (req, cost) = self.process.output.clone();
         if req != "FUEL" {
-        if let Some(x) = (*(self.resources.get(&req).unwrap())).checked_sub(cost){
-        *(self.resources.get_mut(&req).unwrap()) -= cost;
-        } else {
-            if *(self.resources.get(&req).unwrap())>0{
-            //println!("error: {:?}", self);
-            *(self.resources.get_mut(&req).unwrap()) = 0;
-            } else {
-            return None
-            }
+        *(self.resources.get_mut(&req).unwrap()) -= cost as i64;
     }
-        }
     
     for (req, cost) in self.process.input.iter() {
         if req == "ORE" {
             continue;
         }
     if self.resources.contains_key(req) {
-        *(self.resources.get_mut(req).unwrap()) += *cost;
+        *(self.resources.get_mut(req).unwrap()) += *(cost) as i64;
     } else {
-        self.resources.insert(req.clone(), *cost);
+        self.resources.insert(req.clone(), *(cost) as i64);
     }
     }
 
     if self.ore_cost >= MIN_COST.load(Ordering::Relaxed) {
         return None
     }
-    if self.resources.is_empty() || self.resources.values().sum::<u64>() == 0 {
+    if self.resources.is_empty() || self.resources.values().filter(|x| **x>0).count() == 0 {
         MIN_COST.fetch_min(self.ore_cost, Ordering::Relaxed);
         println!("found fuel: {:?}, {:?}", self.ore_cost, MIN_COST.load(Ordering::Relaxed));
         return None
@@ -151,11 +143,11 @@ impl Job {
     out.sort_by(|a,b| calc_total_wastage(&a.process, &a.resources).partial_cmp(&calc_total_wastage(&b.process, &b.resources)).unwrap());
     //out.reverse();
     //Some(vec![out.pop().unwrap()])
-    if calc_total_wastage(&out[0].process, &out[0].resources) == 0 {
-        return Some(vec![out[0].clone()])
+   // if calc_total_wastage(&out[0].process, &out[0].resources) == 0 {
+    Some(vec![out[0].clone()])
 
-    }
-    Some(out.iter().cloned().take(4).collect())
+    //}
+    //Some(out.iter().cloned().take(4).collect())
     }
 }
 
@@ -163,7 +155,7 @@ impl Job {
 
 #[aoc(day14, part1)]
 pub fn solve_part1(input: &Vec<Process>) -> u64 {
-    let mut resources: HashMap<String, u64> = HashMap::new();
+    let mut resources: HashMap<String, i64> = HashMap::new();
     let mut stack: Vec<Job> = Vec::new();
     let mut init_stack: Vec<Job> = Vec::new();
     // BFS all possible processes
@@ -297,7 +289,7 @@ mod day14tests {
     }
     #[test]
     fn test_wasteage() {
-        let res: HashMap<String, u64> = hashmap!{String::from("A") => 7, String::from("E") => 1};
+        let res: HashMap<String, i64> = hashmap!{String::from("A") => 7, String::from("E") => 1};
 
         assert_eq!(calc_total_wastage(&Process{input: HashMap::new(), output: (String::from("A"), 10), ore_cost: 10}, &res), 3) 
     }
