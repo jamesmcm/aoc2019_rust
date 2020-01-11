@@ -1,4 +1,8 @@
 #![feature(atomic_min_max)]
+
+#[macro_use] extern crate maplit;
+
+
 #[macro_use]
 extern crate lazy_static;
 
