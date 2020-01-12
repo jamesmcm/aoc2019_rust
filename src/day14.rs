@@ -76,6 +76,32 @@ fn find_possible_processes_backwards(
     out
 }
 
+fn find_possible_processes_backwards_nodebt(
+    processes: &Vec<Process>,
+    resources: &HashMap<String, i64>,
+) -> Vec<Process> {
+    let mut out: Vec<Process> = Vec::new();
+    for p in processes {
+        let mut flag: bool = true;
+        let (req, cost) = p.output.clone();
+            if req == "FUEL" {
+                continue;
+            }
+            if let Some(x) = resources.get(&req) {
+               if *x <= 0 { // || *x < cost as i64 {
+                    flag = false;
+               }
+            } else {
+                flag = false;
+            }
+        if flag {
+            out.push((*p).clone());
+        };
+    }
+    out.sort_by(|a, b| (a.ore_cost).partial_cmp(&b.ore_cost).unwrap());
+    out.reverse();
+    out
+}
 
 fn calc_total_wastage(p: &Process, r: &HashMap<String, i64>) -> u64 {
     let sub: i64 = p.output.1 as i64 - *(r.get(&p.output.0).unwrap());
@@ -147,98 +173,61 @@ impl Job {
 }
 
 
-fn find_possible_processes(
-    processes: &Vec<Process>,
-    resources: &HashMap<String, i64>,
-) -> Vec<Process> {
-    let mut out: Vec<Process> = Vec::new();
-    for p in processes {
-        let mut flag: bool = true;
-        if p.input.is_empty(){
-            continue;
-        }
-        for (req, cost) in p.input.iter() {
-            if req == "ORE" {
-                continue;
-            }
-            if let Some(x) = resources.get(req) {
-                if *x < (*cost as i64) {
-                    flag = false;
-                    break;
-                }
-            } else {
-                flag = false;
-                break;
-            }
-        }
-        if flag {
-            out.push((*p).clone());
-        };
-    }
-    //out.sort_by(|a, b| (a.ore_cost).partial_cmp(&b.ore_cost).unwrap());
-    //println!("{:?}, {:?}", resources, out);
-    out
-}
-
 #[aoc(day14, part2)]
 pub fn solve_part2(input: &Vec<Process>) -> u64 {
+    solve_part2_inner(input, 1_000_000_000_000)
+
+}
+
+pub fn solve_part2_inner(input: &Vec<Process>, ore_stock: u64) -> u64 {
 
     let mut fuel: u64 = 0;
     // Run P1, get ore cost and final resources
     let (ore_cost, mut resources) = solve_part1_inner(input);
     // Divide 1 trillion by ore_cost
-    let base_iterations: u64 = 1_000_000_000_000 / ore_cost;
-    let remaining_ore: u64 = 1_000_000_000_000 % ore_cost;
+    let base_iterations: u64 = ore_stock / ore_cost;
+    let remaining_ore: u64 = ore_stock % ore_cost;
+    let mut reclaimed_ore: u64 = 0;
     fuel += base_iterations;
     // Multiply remaining resources by this
     resources.iter_mut().for_each(|x| *(x.1) = (x.1).abs() * base_iterations as i64);
     println!("{:?}", resources);
     
 
-    // Run forward with these resources?
+    // Run backward to reclaim ore
     loop {
-    let possible = find_possible_processes(input, &resources);
+    let possible = find_possible_processes_backwards_nodebt(input, &resources);
     if possible.is_empty() { break;}
 
     let p: Process = possible[0].clone();
+    println!("{:?}, res: {:?}",p, resources);
 
     // Apply max times
-    let mut mindiv: i64 = COST_LIMIT as i64;
+
+    let (req, cost) = &p.output;
+    let mut mindiv: i64 = *resources.get(req).unwrap() / *cost as i64;
+    if mindiv == 0 && *resources.get(req).unwrap() % *cost as i64 != 0 {
+        mindiv = 1;
+    }
+    *(resources.get_mut(req).unwrap()) -= *cost as i64 * mindiv;
+    reclaimed_ore += p.ore_cost * mindiv as u64;
+
+
 
     for (req, cost) in p.input.iter() {
-        if req == "ORE" {
-            continue;
-        }
-        if let Some(x) = resources.get(req){
-        let x = x / *cost as i64;
-        if x < mindiv {
-            mindiv = x;
-        }
-        }
-    }
-
-    for (req, cost) in p.input.iter() {
-        if req == "ORE" {
-            continue;
-        }
-        //println!("{:?}, {:?}", (req, cost), self.resources);
-        *(resources.get_mut(req).unwrap()) -= *cost as i64 * mindiv;
-    }
-
-    if resources.contains_key(&p.output.0) {
-        *(resources.get_mut(&p.output.0).unwrap()) += p.output.1 as i64 * mindiv;
+    if resources.contains_key(req) {
+        *(resources.get_mut(req).unwrap()) += *(cost) as i64 *mindiv;
     } else {
-        resources.insert(p.output.0.clone(), p.output.1 as i64 * mindiv);
+        resources.insert(req.clone(), *(cost) as i64 *mindiv);
     }
-    }
-    if let Some(x) = resources.get("FUEL") {
-    fuel += *x as u64;
     }
 
-    println!("{:?}, ORE: {:?}", resources, remaining_ore);
-    fuel
     }
 
+    println!("{:?}, ORE: {:?}", resources, (remaining_ore + reclaimed_ore));
+    fuel + ((remaining_ore + reclaimed_ore) / ore_cost)
+
+}
 #[aoc(day14, part1)]
 pub fn solve_part1(input: &Vec<Process>) -> u64 {
     solve_part1_inner(input).0
@@ -470,6 +459,163 @@ mod day14tests {
 5 BHXH, 4 VRPVC => 5 LTCX"
             )),
             460664
+        );
+    }
+    #[test]
+    fn p2_test1() {
+        assert_eq!(
+            solve_part2_inner(&mut input_generator(
+                "10 ORE => 10 A
+1 ORE => 1 B
+7 A, 1 B => 1 C
+7 A, 1 C => 1 D
+7 A, 1 D => 1 E
+7 A, 1 E => 1 FUEL"
+            ), 620),
+            21
+        );
+    }
+    #[test]
+    fn p2_test2() {
+        assert_eq!(
+            solve_part2_inner(&mut input_generator(
+                "10 ORE => 10 A
+1 ORE => 1 B
+7 A, 1 B => 1 C
+7 A, 1 C => 1 D
+7 A, 1 D => 1 E
+7 A, 1 E => 1 FUEL"
+            ), 2480),
+            85
+        );
+    }
+    #[test]
+    fn p2_test3() {
+        assert_eq!(
+            solve_part2_inner(&mut input_generator(
+                "10 ORE => 10 A
+1 ORE => 1 B
+7 A, 1 B => 1 C
+7 A, 1 C => 1 D
+7 A, 1 D => 1 E
+7 A, 1 E => 1 FUEL"
+            ), 17360),
+            596
+        );
+    }
+    #[test]
+    fn p2_test_no_extra_ore() {
+        assert_eq!(
+            solve_part2_inner(&mut input_generator(
+                "157 ORE => 5 NZVS
+165 ORE => 6 DCFZ
+44 XJWVT, 5 KHKGT, 1 QDVJ, 29 NZVS, 9 GPVTF, 48 HKGWZ => 1 FUEL
+12 HKGWZ, 1 GPVTF, 8 PSHF => 9 QDVJ
+179 ORE => 7 PSHF
+177 ORE => 5 HKGWZ
+7 DCFZ, 7 PSHF => 2 XJWVT
+165 ORE => 2 GPVTF
+3 DCFZ, 7 NZVS, 5 HKGWZ, 10 PSHF => 8 KHKGT"
+            ), 999999995904 ),
+            82163947
+        );
+    }
+    #[test]
+    fn p2_test_extra_ore() {
+        assert_eq!(
+            solve_part2_inner(&mut input_generator(
+                "10 ORE => 10 A
+1 ORE => 1 B
+7 A, 1 B => 1 C
+7 A, 1 C => 1 D
+7 A, 1 D => 1 E
+7 A, 1 E => 1 FUEL"
+            ), 435),
+            15
+        );
+    }
+    #[test]
+    fn p2_test_no_extra_ore_simple() {
+        assert_eq!(
+            solve_part2_inner(&mut input_generator(
+                "10 ORE => 10 A
+1 ORE => 1 B
+7 A, 1 B => 1 C
+7 A, 1 C => 1 D
+7 A, 1 D => 1 E
+7 A, 1 E => 1 FUEL"
+            ), 434),
+            14
+        );
+    }
+    #[test]
+    fn p2_test_extra_ore_2step() {
+        assert_eq!(
+            solve_part2_inner(&mut input_generator(
+                "10 ORE => 10 A
+1 ORE => 1 B
+7 A, 1 B => 1 C
+7 A, 1 C => 1 D
+7 A, 1 D => 1 E
+7 A, 1 E => 1 FUEL"
+            ), 404),
+            14
+        );
+    }
+    #[test]
+    fn p2_test_extra_ore_bigstep() {
+        assert_eq!(
+            solve_part2_inner(&mut input_generator(
+                "10 ORE => 10 A
+1 ORE => 1 B
+7 A, 1 B => 1 C
+7 A, 1 C => 1 D
+7 A, 1 D => 1 E
+7 A, 1 E => 1 FUEL"
+            ), 269),
+            9
+        );
+    }
+    #[test]
+    fn p2_test_extra_ore_bigstep2() {
+        assert_eq!(
+            solve_part2_inner(&mut input_generator(
+                "10 ORE => 10 A
+1 ORE => 1 B
+7 A, 1 B => 1 C
+7 A, 1 C => 1 D
+7 A, 1 D => 1 E
+7 A, 1 E => 1 FUEL"
+            ), 93+1+30),
+            4
+        );
+    }
+    #[test]
+    fn p2_test_no_extra_ore_bigstep() {
+        assert_eq!(
+            solve_part2_inner(&mut input_generator(
+                "10 ORE => 10 A
+1 ORE => 1 B
+7 A, 1 B => 1 C
+7 A, 1 C => 1 D
+7 A, 1 D => 1 E
+7 A, 1 E => 1 FUEL"
+            ), 268),
+            8
+        );
+    }
+    #[test]
+    fn p2_test_no_extra_ore_bigstep2() {
+        assert_eq!(
+            solve_part2_inner(&mut input_generator(
+                "10 ORE => 10 A
+1 ORE => 1 B
+7 A, 1 B => 1 C
+7 A, 1 C => 1 D
+7 A, 1 D => 1 E
+7 A, 1 E => 1 FUEL"
+            ), 93+30),
+            3
         );
     }
 }
